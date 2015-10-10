@@ -1,0 +1,123 @@
+$install_puppet_master_centos7 = <<SCRIPT
+peinstaller_url="$1"
+peanswers_url="$2"
+r10kyaml_url="$3"
+master_hostname="$4"
+master_domain="$5"
+master_ip="$6"
+hiera_yaml_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/hiera.yaml"
+r10k_pp_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/r10k.pp"
+api_cert="/etc/puppetlabs/puppet/ssl/certs/$master_hostname.$master_domain.pem"
+api_key="/etc/puppetlabs/puppet/ssl/private_keys/$master_hostname.$master_domain.pem"
+api_cacert="/etc/puppetlabs/puppet/ssl/certs/ca.pem"
+autosign_exe_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/autosign.sh"
+
+
+echo "Adding [$master_hostname.$master_domain] to hosts file..."
+sudo echo -e "$master_ip	$master_hostname.$master_domain $master_hostname\n$(cat /etc/hosts)" > /etc/hosts
+
+echo "Disabling firewall"
+sudo systemctl mask firewalld ; sudo systemctl stop firewalld
+
+echo "Downloading puppet from $peinstaller_url and extracting to /tmp/peinstaller..." 
+wget -q --timeout=1200 $peinstaller_url -O /tmp/peinstaller.tar.gz
+mkdir /tmp/peinstaller
+tar -xf /tmp/peinstaller.tar.gz --strip-components=1 -C /tmp/peinstaller
+
+echo "Downloading answers file from $peanswers_url..."
+curl -L $peanswers_url > /tmp/master.answers
+
+echo "Installing puppet..."
+sudo /tmp/peinstaller/puppet-enterprise-installer -a /tmp/master.answers
+
+echo "Add the hiera.yaml..."
+sudo curl -L "${hiera_yaml_url}" > `sudo puppet config print hiera_config`
+
+echo "Configuring r10k..."
+sudo puppet module install zack/r10k
+sudo curl -L "${r10k_pp_url}" > /var/tmp/r10k.pp
+sudo puppet apply /var/tmp/r10k.pp
+sudo r10k deploy environment -pv
+
+echo "Updating classes via classifier API..."
+sudo curl -X POST https://$master_hostname.$master_domain:4433/classifier-api/v1/update-classes --cert $api_cert --key $api_key --cacert $api_cacert -v
+
+echo "Adding the puppetclassify puppet gem..."
+sudo puppet apply -e "package{'puppetclassify':ensure=>'0.1.0',provider=>'pe_gem'}" -v
+echo "Classifying nodes with module https://github.com/zoojar/prosvcs-node_manager..."
+sudo puppet apply -e 'include classifier' -v
+
+echo "Configuring policy-based autosigning..."
+echo 'd41d8cd98f00b204e9800998ecf8427e' >/etc/puppetlabs/puppet/global-psk
+curl -L "${autosign_exe_url}" > /etc/puppetlabs/puppet/autosign.sh
+sudo chmod 500 /etc/puppetlabs/puppet/autosign.sh ; sudo chown pe-puppet /etc/puppetlabs/puppet/autosign.sh
+sudo puppet config set autosign /etc/puppetlabs/puppet/autosign.sh --section master
+
+echo "restarting pe-puppetserver service for autosigning & yaml config to take affect..."
+sudo service pe-puppetserver restart
+
+sudo puppet agent -t
+
+echo "done."
+
+SCRIPT
+
+
+$install_puppet_agent_linux = <<SCRIPT
+master_ip="$1"
+master_hostname="$2"
+master_domain="$3"
+
+
+echo "Disabling firewall"
+sudo systemctl mask firewalld ; sudo systemctl stop firewalld
+sudo ufw disable 
+
+echo "Adding [$master_ip $master_hostname.$master_domain $master_hostname] to hosts file..."
+sudo echo -e "$master_ip $master_hostname.$master_domain $master_hostname\n$(cat /etc/hosts)" > /etc/hosts
+
+echo "Setting up custom csr attributes for autosigning..."
+sudo mkdir -p /etc/puppetlabs/puppet
+printf "custom_attributes:\n  1.2.840.113549.1.9.7: d41d8cd98f00b204e9800998ecf8427e" >  /etc/puppetlabs/puppet/csr_attributes.yaml 
+
+echo "Installing puppet from https://$master_hostname.$master_domain:8140/packages/current/install.bash..."
+curl -k https://$master_hostname.$master_domain:8140/packages/current/install.bash | sudo bash
+
+echo "Configuring puppet with master server $master_hostname.$master_domain..."
+sudo puppet config set server $master_hostname.$master_domain
+
+sudo puppet agent -t
+
+echo "Done."
+
+SCRIPT
+
+
+
+$install_puppet_agent_windows = <<SCRIPT
+$master_ip=$Args[0]
+$master_hostname=$Args[1]
+$master_domain=$Args[2]
+$peinstaller_url_windows=$Args[3]
+$web_proxy_ip_port=$Args[4]
+
+echo "Adding [$master_ip $master_hostname.$master_domain] to hosts file..."
+add-content "C:\\Windows\\System32\\drivers\\etc\\hosts" "$master_ip $master_hostname.$master_domain"
+
+echo "Setting up custom csr attributes for autosigning..."
+mkdir 'C:\\Programdata\\PuppetLabs\\Puppet\\etc'
+set-content 'C:\\Programdata\\PuppetLabs\\Puppet\\etc\\csr_attributes.yaml' "custom_attributes:`r`n  1.2.840.113549.1.9.7: d41d8cd98f00b204e9800998ecf8427e"
+
+echo "Downloading puppet from $peinstaller_url_windows $web_proxy_ip_port..."
+wget $peinstaller_url_windows -outfile "c:\\windows\\temp\\puppet-enterprise-installer.msi" -Proxy $web_proxy_ip_port
+
+echo "Installing puppet..."
+Start-Process -FilePath msiexec -ArgumentList /i, "C:\\Windows\\Temp\\puppet-enterprise-installer.msi", /quiet -wait 
+
+echo "Configuring puppet with master server $master_hostname.$master_domain..."
+$env:Path += ";C:\\Program Files\\Puppet Labs\\Puppet\\bin"
+puppet config set server, "$master_hostname.$master_domain"
+
+echo "Done."
+
+SCRIPT
