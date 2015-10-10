@@ -1,6 +1,0 @@
-cachedir: '/opt/puppetlabs/server/data/r10k'
-sources:
-  main:
-    remote: 'https://github.com/zoojar/openstack-lab-controlrepo.git'
-    basedir: '/etc/puppetlabs/puppet/environments'
-    prefix: false
