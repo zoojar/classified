@@ -1,16 +1,14 @@
 $install_puppet_master_centos7 = <<SCRIPT
 peinstaller_url="$1"
 peanswers_url="$2"
-r10kyaml_url="$3"
-master_hostname="$4"
-master_domain="$5"
-master_ip="$6"
-hiera_yaml_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/hiera.yaml"
-r10k_pp_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/r10k.pp"
+master_hostname="$3"
+master_domain="$4"
+master_ip="$5"
+hiera_yaml_url="https://raw.githubusercontent.com/zoojar/classified/master/hiera.yaml"
 api_cert="/etc/puppetlabs/puppet/ssl/certs/$master_hostname.$master_domain.pem"
 api_key="/etc/puppetlabs/puppet/ssl/private_keys/$master_hostname.$master_domain.pem"
 api_cacert="/etc/puppetlabs/puppet/ssl/certs/ca.pem"
-autosign_exe_url="https://raw.githubusercontent.com/zoojar/openstack-lab/master/autosign.sh"
+autosign_exe_url="https://raw.githubusercontent.com/zoojar/classified/master/autosign.sh"
 
 
 echo "Adding [$master_hostname.$master_domain] to hosts file..."
@@ -35,8 +33,7 @@ sudo curl -L "${hiera_yaml_url}" > `sudo puppet config print hiera_config`
 
 echo "Configuring r10k..."
 sudo puppet module install zack/r10k
-sudo curl -L "${r10k_pp_url}" > /var/tmp/r10k.pp
-sudo puppet apply /var/tmp/r10k.pp
+sudo puppet apply -e "class {'r10k': remote => 'https://github.com/zoojar/classified-control-repo.git', provider => 'puppet_gem'}"
 sudo r10k deploy environment -pv
 
 echo "Updating classes via classifier API..."
