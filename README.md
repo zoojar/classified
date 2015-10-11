@@ -1,7 +1,4 @@
-#openstack-lab  
-##Vagrant lab setup for PE 3.8.2 & Openstack  
-1x Puppet Master Server  
-1x All-in-one Openstack Server   
+#Lab for automating classification with node_manager
 
 ###Requirements
 Virtualbox 5.0.0  
@@ -40,11 +37,3 @@ This script configures the following on the puppet master:
 10. Creates nodes groups specified in the puppet module 'zj/classifier' (deployed by r10k) using the puppet module 'prosvcs/node_manager'  
 11. Sets up autosigning using 'autosign.sh' and a global psk to allow auto-signing of the openstack node  
   
-  
-#####Openstack AIO Node
-1. '/etc/hosts' file for master name
-2. Disable firewall
-3. Configure custom CSR attributes to allow auto-signing with the global psk
-4. Download puppet agent installer tarball from master and install puppet (curl to master)
-5. Set puppet master server in 'puppet.conf' to fqdn of the master
-6. Invoke a puppet run to configure Openstack
