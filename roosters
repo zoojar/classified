@@ -29,20 +29,15 @@ echo "Installing puppet..."
 sudo /tmp/peinstaller/puppet-enterprise-installer -a /tmp/master.answers
 
 echo "Add the hiera.yaml..."
-sudo curl -L "${hiera_yaml_url}" > `sudo puppet config print hiera_config`
+sudo curl -sL "${hiera_yaml_url}" > `sudo puppet config print hiera_config`
 
 echo "Configuring r10k..."
 sudo puppet module install zack/r10k
-sudo puppet apply -e "class {'r10k': remote => 'https://github.com/zoojar/classified-control-repo.git', provider => 'puppet_gem'}"
+sudo puppet apply -e "class {'r10k': remote => 'https://github.com/zoojar/classified-control-repo.git'}"
 sudo r10k deploy environment -pv
 
 echo "Updating classes via classifier API..."
 sudo curl -X POST https://$master_hostname.$master_domain:4433/classifier-api/v1/update-classes --cert $api_cert --key $api_key --cacert $api_cacert -v
-
-echo "Adding the puppetclassify puppet gem..."
-sudo puppet apply -e "package{'puppetclassify':ensure=>'0.1.0',provider=>'pe_gem'}" -v
-echo "Classifying nodes with module https://github.com/zoojar/prosvcs-node_manager..."
-sudo puppet apply -e 'include classifier' -v
 
 echo "Configuring policy-based autosigning..."
 echo 'd41d8cd98f00b204e9800998ecf8427e' >/etc/puppetlabs/puppet/global-psk
@@ -52,6 +47,10 @@ sudo puppet config set autosign /etc/puppetlabs/puppet/autosign.sh --section mas
 
 echo "restarting pe-puppetserver service for autosigning & yaml config to take affect..."
 sudo service pe-puppetserver restart
+
+echo "Classifying nodes with module https://github.com/zoojar/prosvcs-node_manager..."
+sudo puppet apply -e "package{'puppetclassify': ensure => '0.1.0', provider => 'puppet_gem'} "
+sudo puppet apply -e "include classifier" -v
 
 sudo puppet agent -t
 

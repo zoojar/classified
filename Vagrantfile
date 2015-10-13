@@ -5,7 +5,7 @@
 $domain                   = "lab.local"
 $master_hostname          = "puppet"
 $master_ip                = "192.168.100.100"
-$peinstaller_url          = "http://10.79.116.189/puppet-enterprise-2015.2.0-el-7-x86_64.tar.gz"
+$peinstaller_url          = "http://192.168.0.7/puppet-enterprise-2015.2.0-el-7-x86_64.tar.gz"
 $peanswers_url            = "https://raw.githubusercontent.com/zoojar/classified/master/puppet.lab.local.answers"
 $autosign_these_nodes     = "*"
 
@@ -24,7 +24,7 @@ nodes = [
     :shell_args      => [$peinstaller_url, $peanswers_url, $master_hostname, $domain, $master_ip] 
   },
   { 
-    :hostname        => 'node-01',
+    :hostname        => 'web-01',
     :domain          => $domain,
     :ip              => '192.168.100.12', 
     :box             => 'puppetlabs/centos-7.0-64-nocm', 
