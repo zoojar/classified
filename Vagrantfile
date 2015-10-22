@@ -6,7 +6,7 @@ $domain                   = "lab.local"
 $master_hostname          = "puppet"
 $master_ip                = "192.168.100.100"
 #$peinstaller_url          = "http://192.168.0.7/puppet-enterprise-2015.2.0-el-7-x86_64.tar.gz"
-$peinstaller_url          = "https://pm.puppetlabs.com/puppet-enterprise/2015.2/puppet-enterprise-2015.2-el-7-x86_64.tar.gz"
+$peinstaller_url          = "https://pm.puppetlabs.com/puppet-enterprise/2015.2.0/puppet-enterprise-2015.2.0-el-7-x86_64.tar.gz"
 $peanswers_url            = "https://raw.githubusercontent.com/zoojar/classified/master/puppet.lab.local.answers"
 $autosign_these_nodes     = "*"
 
